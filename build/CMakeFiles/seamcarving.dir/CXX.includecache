@@ -1,0 +1,26 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/nfgallimore/Code/SeamCarving/seamcarving.cpp
+iostream
+-
+string
+-
+sstream
+-
+fstream
+-
+cassert
+-
+cstdlib
+-
+limits
+-
+vector
+-
+
