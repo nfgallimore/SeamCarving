@@ -6,7 +6,7 @@
         {
             "label": "Compile and run",
             "type": "shell",
-            "command": "rm -rf build && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && make && ./seamcarving ../test.pgm 1 0",
+            "command": "rm -rf build && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && make && ./seamcarving ../horizontal.pgm 1 0",
             "group": {
                 "kind": "build",
                 "isDefault": true

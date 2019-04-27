@@ -9,137 +9,100 @@
 
 using namespace std;
 
+class SeamCarver
+{
+public:
+    SeamCarver(string fname, int m_numRowsToRemove, int m_numColsToRemove);
+    void printImage();
+    void printEnergyMatrix();
+
+private:
+    vector<vector<int >> image;
+    vector<vector<int >> energyMatrix;
+    void createEnergyMatrix();
+    void getColsToRemoveGreedily();
+    void getRowsToRemoveGreedily();
+    void removeRows(vector<int>& colsToRemove);
+    void removeCols(vector<int>& rowsToRemove);
+    int m_numRows;
+    int m_numCols;
+    int m_numRowsToRemove;
+    int m_numColsToRemove;
+};
+
 int main(int argc, char** argv)
 {
+    // Handle arguments
     if (argc != 4)
     {
         cout << "Args: [filename] [numRowsToRemove] [numColsToRemove]\n";
         return 1;
     }
 
-    string fname = argv[1];
-    int numRowsToRemove = atoi(argv[2]);
-    int numColsToRemove = atoi(argv[3]);
+    SeamCarver sc(argv[1], atoi(argv[2]), atoi(argv[3]));
+    sc.printImage();
+    sc.printEnergyMatrix();
+}
 
-    std::ifstream ifs(fname);
-    if (!ifs.is_open())
-    {
-        std::cout << "File could not be opened.\n";
-        return 1;
+SeamCarver::SeamCarver(string fname, int numRowsToRemove, int numColsToRemove)
+{
+    // ifstream exception handling from https://stackoverflow.com/a/27740109/3097454
+    ifstream ifs(fname);
+    try {
+        ifs.open(fname);
     }
+    catch (const std::exception& e) {
+        std::ostringstream msg;
+        msg << "Opening file '" << fname 
+            << "' failed, it either doesn't exist or is not accessible.";
+        throw std::runtime_error(msg.str());
+    }
+
+    // set m_numRowsToRemove and m_numColsToRemove
+    m_numColsToRemove = numColsToRemove;
+    m_numRowsToRemove = numRowsToRemove;
 
     // analyze image file header
     string tmp;
-    getline(ifs, tmp); // P2 literal
-    getline(ifs, tmp); // comments (assume it has comments)
 
-    // get file's x and y
-    int numCols, numRows;
-    ifs >> numCols;
-    ifs >> numRows;
-    
-    getline(ifs, tmp); // skip rest of dimensions line
-    getline(ifs, tmp); // skip max grayscale line
+     // skip `P2` literal
+    getline(ifs, tmp);
 
-    // setup file matrix
-    int pgmValues[numRows][numCols]; // pgmValues[row][column]
+    //** ASSUME IMAGE FILES HAS COMMENTS **//
+    getline(ifs, tmp); 
+
+    // get image's m_numCols and m_numRows
+    ifs >> m_numCols;
+    ifs >> m_numRows;
+
+    // skip the new line char for dimensions line
+    getline(ifs, tmp);
+
+    // skip max grayscale line
+    getline(ifs, tmp); 
 
     // store values into matrix
-    for (int row = 0; row < numRows; row++)
+    for (int row = 0; row < m_numRows; row++)
     {
-        for (int col = 0; col < numCols && !ifs.eof(); col++)
+        vector<int> colVector;
+        for (int col = 0; col < m_numCols && !ifs.eof(); col++)
         {
-            ifs >> pgmValues[row][col];
-            cout << pgmValues[row][col] << " ";
+            int val;
+            ifs >> val;
+            colVector.push_back(val);
         }
-        cout << endl;
+        image.push_back(colVector);
     }
 
-    // create energy matrix
-    int energyMatrix[numRows][numCols];
+    // continue on to create the energy matrix
+    createEnergyMatrix();
 
-    for (int row = 0; row < numRows; row++)
-    {
-        for (int col = 0; col < numCols && !ifs.eof(); col++)
-        {
-            int rowAbove = row - 1;
-            int rowBelow = row + 1;
-            int colBefore = col - 1;
-            int colAfter = col + 1;
+    printEnergyMatrix();
+}
 
-            int aboveDiff;
-            int belowDiff;
-            int leftDiff;
-            int rightDiff;
-
-            int above = pgmValues[rowAbove][col];
-            int below = pgmValues[rowBelow][col];
-            int left = pgmValues[row][colBefore];
-            int right = pgmValues[row][colAfter];
-
-            int current = pgmValues[row][col];
-
-            // if first row
-            if (row == 0)
-            {
-                aboveDiff = 0;
-            }
-            else
-            {
-                aboveDiff = abs(current - above);
-            }
-
-            // if last row
-            if (row == numRows - 1)
-            {
-                belowDiff = 0;
-            }
-            else
-            {
-                belowDiff = abs(current - below);
-            }
-
-            // if first col
-            if (col == 0)
-            {
-                leftDiff = 0;
-            }
-            else
-            {
-                leftDiff = abs(current - left);
-            }
-
-            // if last col
-            if (col == numCols - 1)
-            {
-                rightDiff = 0;
-            }
-            else
-            {
-                rightDiff = abs(current - right);
-            }
-
-            energyMatrix[row][col] = 
-                aboveDiff + // the one above
-                belowDiff + // the one below
-                leftDiff + // the one to the left
-                rightDiff; // the one to the right
-        }
-    }
-
-    // print energy matrix
-    cout << endl;
-    for (int row = 0; row < numRows; row++)
-    {
-        for (int col = 0; col < numCols; col++)
-        {
-            cout << energyMatrix[row][col] << " ";
-        }
-        cout << endl;
-    }
-
-    // Remove cols
-    for (int i = 0; i < numColsToRemove; i++)
+void SeamCarver::getColsToRemoveGreedily()
+{
+    for (int i = 0; i < m_numColsToRemove; i++)
     {
         // find starting col
         std::vector<int> colsToRemove;
@@ -147,7 +110,7 @@ int main(int argc, char** argv)
         int min = energyMatrix[0][0];
         int minIndex = 0;
 
-        for (int col = 1; col < numCols; col++)
+        for (int col = 1; col < m_numCols; col++)
         {
             if (energyMatrix[0][col] < min)
             {
@@ -158,7 +121,7 @@ int main(int argc, char** argv)
 
         colsToRemove.push_back(minIndex);
 
-        for (int row = 1; row < numRows; row++)
+        for (int row = 1; row < m_numRows; row++)
         {
             int prevColIndex = minIndex;
             min = numeric_limits<int>::max(); // has to be reset to some value
@@ -181,7 +144,7 @@ int main(int argc, char** argv)
             }
 
             // check to right
-            if (prevColIndex != numCols - 1) // not right most col
+            if (prevColIndex != m_numCols - 1) // not right most col
             {
                 if (energyMatrix[row][prevColIndex + 1] < min)
                 {
@@ -189,30 +152,14 @@ int main(int argc, char** argv)
                     minIndex = prevColIndex + 1;
                 }
             }
-
             colsToRemove.push_back(minIndex);
         }
-
-        // remove the columns from pgmValues array
-        for (int i = 0; i < numRows; i++)
-        {
-            for (int j = colsToRemove[i]; j < numCols - 1; j++)
-            {
-                pgmValues[i][j] = pgmValues[i][j + 1];
-            }
-        }
-        numCols--;
-
-        cout << "\nCols to remove: ";
-        for (int i = 0; i < colsToRemove.size(); i++)
-        {
-            cout << colsToRemove[i] << " ";
-        }
-        cout << endl;
     }
+}
 
-    // Remove rows
-    for (int i = 0; i < numRowsToRemove; i++)
+void SeamCarver::getRowsToRemoveGreedily()
+{
+    for (int i = 0; i < m_numRowsToRemove; i++)
     {
         // find starting row
         std::vector<int> rowsToRemove;
@@ -220,7 +167,7 @@ int main(int argc, char** argv)
         int min = energyMatrix[0][0];
         int minIndex = 0;
 
-        for (int row = 1; row < numRows; row++)
+        for (int row = 1; row < m_numRows; row++)
         {
             if (energyMatrix[row][0] < min)
             {
@@ -230,7 +177,7 @@ int main(int argc, char** argv)
         }
         rowsToRemove.push_back(minIndex);
 
-        for (int col = 1; col < numCols; col++)
+        for (int col = 1; col < m_numCols; col++)
         {
             int prevRowIndex = minIndex;
             min = numeric_limits<int>::max(); // has to be reset to some value
@@ -253,7 +200,7 @@ int main(int argc, char** argv)
             }
 
             // check row below
-            if (prevRowIndex != numRows - 1) // not bot row
+            if (prevRowIndex != m_numRows - 1) // not bot row
             {
                 if (energyMatrix[prevRowIndex + 1][col] < min)
                 {
@@ -261,36 +208,131 @@ int main(int argc, char** argv)
                     minIndex = prevRowIndex + 1;
                 }
             }
-
             rowsToRemove.push_back(minIndex);
         }
+    }
+}
 
-        // remove the rows from pgmValues array
-        for (int i = 0; i < numCols; i++)
+// removes cols, at index 0 remove image[colsToRemove[0], 0]
+// col is the index, row is the value of colsToRemove
+void SeamCarver::removeCols(vector<int>& colsToRemove)
+{
+    for (int i = 0; i < m_numRows; i++)
+    {
+        for (int j = colsToRemove[i]; j < m_numCols - 1; j++)
         {
-            for (int j = rowsToRemove[i]; j < numRows - 1; j++)
-            {
-                pgmValues[j][i] = pgmValues[j + 1][i];
-            }
+            image[i][j] = image[i][j + 1];
         }
-        numRows--;
+    }
+    m_numCols--;
+}
 
-        cout << "\nRows to remove: ";
-        for (int i = 0; i < rowsToRemove.size(); i++)
+// removes rows, at index 0 remove image[0, rowsToRemove[0]]
+// row is the index, column is the value of rowsToRemove
+void SeamCarver::removeRows(vector<int>& rowsToRemove)
+{
+    for (int i = 0; i < m_numCols; i++)
+    {
+        for (int j = rowsToRemove[i]; j < m_numRows - 1; j++)
         {
-            cout << rowsToRemove[i] << " ";
+            image[j][i] = image[j + 1][i];
+        }
+    }
+    m_numRows--;
+}
+
+void SeamCarver::createEnergyMatrix()
+{
+    int m_numRows = image.size();
+
+    for (int row = 0; row < image.size(); row++)
+    {
+        vector<int> energyMatrixCol;
+        int m_numCols = image[row].size();
+
+        for (int col = 0; col < m_numCols; col++)
+        {
+            int rowAbove = row - 1;
+            int rowBelow = row + 1;
+            int colBefore = col - 1;
+            int colAfter = col + 1;
+
+            int aboveDiff;
+            int belowDiff;
+            int leftDiff;
+            int rightDiff;
+
+            int current = image[row][col];
+
+            // if first row
+            if (row == 0)
+            {
+                aboveDiff = 0;
+            }
+            else
+            {
+                aboveDiff = abs(current - image[rowAbove][col]);
+            }
+
+            // if last row
+            if (row == m_numRows - 1)
+            {
+                belowDiff = 0;
+            }
+            else
+            {
+                belowDiff = abs(current - image[rowBelow][col]);
+            }
+
+            // if first col
+            if (col == 0)
+            {
+                leftDiff = 0;
+            }
+            else
+            {
+                leftDiff = abs(current - image[row][colBefore]);
+            }
+
+            // if last col
+            if (col == m_numCols - 1)
+            {
+                rightDiff = 0;
+            }
+            else
+            {
+                rightDiff = abs(current - image[row][colAfter]);
+            }
+
+            energyMatrixCol.push_back( 
+                aboveDiff + // the one above
+                belowDiff + // the one below
+                leftDiff + // the one to the left
+                rightDiff); // the one to the right
+        }
+        energyMatrix.push_back(energyMatrixCol);
+    }
+}
+
+void SeamCarver::printImage()
+{
+    for (int i = 0; i < m_numRows; i++)
+    {
+        for (int j = 0; j < m_numCols; j++)
+        {
+            cout << image[i][j] << " ";
         }
         cout << endl;
     }
+}
 
-    // print resulting image
-    cout << endl;
-    
-    for (int row = 0; row < numRows; row++)
+void SeamCarver::printEnergyMatrix()
+{
+    for (int i = 0; i < m_numRows; i++)
     {
-        for (int col = 0; col < numCols; col++)
+        for (int j = 0; j < m_numCols; j++)
         {
-            cout << pgmValues[row][col] << " ";
+            cout << energyMatrix[i][j] << " ";
         }
         cout << endl;
     }
