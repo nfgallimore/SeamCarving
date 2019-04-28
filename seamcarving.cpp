@@ -46,16 +46,10 @@ int main(int argc, char** argv)
 
 SeamCarver::SeamCarver(string fname, int numRowsToRemove, int numColsToRemove)
 {
-    // ifstream exception handling from https://stackoverflow.com/a/27740109/3097454
     ifstream ifs(fname);
-    try {
-        ifs.open(fname);
-    }
-    catch (const std::exception& e) {
-        std::ostringstream msg;
-        msg << "Opening file '" << fname 
-            << "' failed, it either doesn't exist or is not accessible.";
-        throw std::runtime_error(msg.str());
+    if (!ifs.is_open())
+    {
+        std::runtime_error(fname + " was not found or is not accessible.\n");
     }
 
     // set m_numRowsToRemove and m_numColsToRemove
@@ -67,13 +61,16 @@ SeamCarver::SeamCarver(string fname, int numRowsToRemove, int numColsToRemove)
 
      // skip `P2` literal
     getline(ifs, tmp);
+    cout << tmp;
 
     //** ASSUME IMAGE FILES HAS COMMENTS **//
     getline(ifs, tmp); 
+    cout << tmp;
 
     // get image's m_numCols and m_numRows
     ifs >> m_numCols;
     ifs >> m_numRows;
+
 
     // skip the new line char for dimensions line
     getline(ifs, tmp);
