@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <limits>
 #include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -15,15 +16,22 @@ public:
     SeamCarver(string fname, int m_numRowsToRemove, int m_numColsToRemove);
     void printImage();
     void printEnergyMatrix();
+    void printCumulativeEnergyMatrixHorizontal();
+    void printCumulativeEnergyMatrixVertical();
 
 private:
-    vector<vector<int >> image;
-    vector<vector<int >> energyMatrix;
     void createEnergyMatrix();
+    void createCumulativeEnergyMatrixHorizontal();
+    void createCumulativeEnergyMatrixVertical();
     void getColsToRemoveGreedily();
     void getRowsToRemoveGreedily();
     void removeRows(vector<int>& colsToRemove);
     void removeCols(vector<int>& rowsToRemove);
+    vector<vector<int >> m_image;
+    vector<vector<int >> m_energyMatrix;
+    vector<vector<int >> m_cumulativeEnergyMatrixHorizontal;
+    vector<int> m_colsToRemove;
+    vector<int> m_rowsToRemove;
     int m_numRows;
     int m_numCols;
     int m_numRowsToRemove;
@@ -41,7 +49,10 @@ int main(int argc, char** argv)
 
     SeamCarver sc(argv[1], atoi(argv[2]), atoi(argv[3]));
     sc.printImage();
+    cout << endl;
     sc.printEnergyMatrix();
+    cout << endl;
+    sc.printCumulativeEnergyMatrixHorizontal();
 }
 
 SeamCarver::SeamCarver(string fname, int numRowsToRemove, int numColsToRemove)
@@ -88,11 +99,123 @@ SeamCarver::SeamCarver(string fname, int numRowsToRemove, int numColsToRemove)
             ifs >> val;
             colVector.push_back(val);
         }
-        image.push_back(colVector);
+        m_image.push_back(colVector);
     }
 
-    // continue on to create the energy matrix
     createEnergyMatrix();
+    createCumulativeEnergyMatrixHorizontal();
+}
+
+void SeamCarver::createEnergyMatrix()
+{
+    int m_numRows = m_image.size();
+
+    for (int row = 0; row < m_image.size(); row++)
+    {
+        vector<int> energyMatrixCol;
+        int m_numCols = m_image[row].size();
+
+        for (int col = 0; col < m_numCols; col++)
+        {
+            int rowAbove = row - 1;
+            int rowBelow = row + 1;
+            int colBefore = col - 1;
+            int colAfter = col + 1;
+
+            int aboveDiff;
+            int belowDiff;
+            int leftDiff;
+            int rightDiff;
+
+            int current = m_image[row][col];
+
+            // if first row
+            if (row == 0)
+            {
+                aboveDiff = 0;
+            }
+            else
+            {
+                aboveDiff = abs(current - m_image[rowAbove][col]);
+            }
+
+            // if last row
+            if (row == m_numRows - 1)
+            {
+                belowDiff = 0;
+            }
+            else
+            {
+                belowDiff = abs(current - m_image[rowBelow][col]);
+            }
+
+            // if first col
+            if (col == 0)
+            {
+                leftDiff = 0;
+            }
+            else
+            {
+                leftDiff = abs(current - m_image[row][colBefore]);
+            }
+
+            // if last col
+            if (col == m_numCols - 1)
+            {
+                rightDiff = 0;
+            }
+            else
+            {
+                rightDiff = abs(current - m_image[row][colAfter]);
+            }
+
+            energyMatrixCol.push_back( 
+                aboveDiff + // the one above
+                belowDiff + // the one below
+                leftDiff + // the one to the left
+                rightDiff); // the one to the right
+        }
+        m_energyMatrix.push_back(energyMatrixCol);
+    }
+}
+
+void SeamCarver::createCumulativeEnergyMatrixHorizontal()
+{
+    for (int i = 0; i < m_numRows; i++)
+    {
+        vector<int> v;
+        v.push_back(m_energyMatrix[i][0]);
+        m_cumulativeEnergyMatrixHorizontal.push_back(v);
+    }
+
+    for (int i = 0; i < m_numRows; i++)
+    {
+        for (int j = 1; j < m_numCols; j++)
+        {
+            if (i == 0)
+            {
+                m_cumulativeEnergyMatrixHorizontal[i].push_back(
+                    m_energyMatrix[i][j] + std::min(
+                        m_cumulativeEnergyMatrixHorizontal[i][j - 1],
+                        m_cumulativeEnergyMatrixHorizontal[i + 1][j - 1]));
+            }
+            else if (i == m_numRows - 1)
+            {
+                m_cumulativeEnergyMatrixHorizontal[i].push_back(
+                    m_energyMatrix[i][j] + std::min(
+                        m_cumulativeEnergyMatrixHorizontal[i][j - 1],
+                        m_cumulativeEnergyMatrixHorizontal[i - 1][j - 1]));
+            }
+            else
+            {
+                m_cumulativeEnergyMatrixHorizontal[i].push_back(
+                    m_energyMatrix[i][j] + std::min(std::min(
+                        m_cumulativeEnergyMatrixHorizontal[i][j - 1],
+                        m_cumulativeEnergyMatrixHorizontal[i + 1][j - 1]),
+                        m_cumulativeEnergyMatrixHorizontal[i - 1][j - 1]));
+            }
+        }
+    }
 }
 
 void SeamCarver::getColsToRemoveGreedily()
@@ -102,15 +225,15 @@ void SeamCarver::getColsToRemoveGreedily()
         // find starting col
         std::vector<int> colsToRemove;
 
-        int min = energyMatrix[0][0];
+        int min = m_energyMatrix[0][0];
         int minIndex = 0;
 
         for (int col = 1; col < m_numCols; col++)
         {
-            if (energyMatrix[0][col] < min)
+            if (m_energyMatrix[0][col] < min)
             {
                 minIndex = col;
-                min = energyMatrix[0][col];
+                min = m_energyMatrix[0][col];
             }
         }
 
@@ -122,18 +245,18 @@ void SeamCarver::getColsToRemoveGreedily()
             min = numeric_limits<int>::max(); // has to be reset to some value
 
             // check below
-            if (energyMatrix[row][prevColIndex] < min)
+            if (m_energyMatrix[row][prevColIndex] < min)
             {
-                min = energyMatrix[row][prevColIndex];
+                min = m_energyMatrix[row][prevColIndex];
                 minIndex = prevColIndex;
             }
 
             // check to left
             if (prevColIndex != 0) // not left most col
             {
-                if (energyMatrix[row][prevColIndex - 1] < min)
+                if (m_energyMatrix[row][prevColIndex - 1] < min)
                 {
-                    min = energyMatrix[row][prevColIndex - 1];
+                    min = m_energyMatrix[row][prevColIndex - 1];
                     minIndex = prevColIndex - 1;
                 }
             }
@@ -141,9 +264,9 @@ void SeamCarver::getColsToRemoveGreedily()
             // check to right
             if (prevColIndex != m_numCols - 1) // not right most col
             {
-                if (energyMatrix[row][prevColIndex + 1] < min)
+                if (m_energyMatrix[row][prevColIndex + 1] < min)
                 {
-                    min = energyMatrix[row][prevColIndex + 1];
+                    min = m_energyMatrix[row][prevColIndex + 1];
                     minIndex = prevColIndex + 1;
                 }
             }
@@ -159,15 +282,15 @@ void SeamCarver::getRowsToRemoveGreedily()
         // find starting row
         std::vector<int> rowsToRemove;
 
-        int min = energyMatrix[0][0];
+        int min = m_energyMatrix[0][0];
         int minIndex = 0;
 
         for (int row = 1; row < m_numRows; row++)
         {
-            if (energyMatrix[row][0] < min)
+            if (m_energyMatrix[row][0] < min)
             {
                 minIndex = row;
-                min = energyMatrix[row][0];
+                min = m_energyMatrix[row][0];
             }
         }
         rowsToRemove.push_back(minIndex);
@@ -178,18 +301,18 @@ void SeamCarver::getRowsToRemoveGreedily()
             min = numeric_limits<int>::max(); // has to be reset to some value
 
             // check same row
-            if (energyMatrix[prevRowIndex][col] < min)
+            if (m_energyMatrix[prevRowIndex][col] < min)
             {
-                min = energyMatrix[prevRowIndex][col];
+                min = m_energyMatrix[prevRowIndex][col];
                 minIndex = prevRowIndex;
             }
 
             // check row above
             if (prevRowIndex != 0) // not top row
             {
-                if (energyMatrix[prevRowIndex - 1][col] < min)
+                if (m_energyMatrix[prevRowIndex - 1][col] < min)
                 {
-                    min = energyMatrix[prevRowIndex - 1][col];
+                    min = m_energyMatrix[prevRowIndex - 1][col];
                     minIndex = prevRowIndex - 1;
                 }
             }
@@ -197,9 +320,9 @@ void SeamCarver::getRowsToRemoveGreedily()
             // check row below
             if (prevRowIndex != m_numRows - 1) // not bot row
             {
-                if (energyMatrix[prevRowIndex + 1][col] < min)
+                if (m_energyMatrix[prevRowIndex + 1][col] < min)
                 {
-                    min = energyMatrix[prevRowIndex + 1][col];
+                    min = m_energyMatrix[prevRowIndex + 1][col];
                     minIndex = prevRowIndex + 1;
                 }
             }
@@ -207,7 +330,6 @@ void SeamCarver::getRowsToRemoveGreedily()
         }
     }
 }
-
 
 // removes cols, at index 0 remove image[colsToRemove[0], 0]
 // col is the index, row is the value of colsToRemove
@@ -217,7 +339,7 @@ void SeamCarver::removeCols(vector<int>& colsToRemove)
     {
         for (int j = colsToRemove[i]; j < m_numCols - 1; j++)
         {
-            image[i][j] = image[i][j + 1];
+            m_image[i][j] = m_image[i][j + 1];
         }
     }
     m_numCols--;
@@ -231,83 +353,10 @@ void SeamCarver::removeRows(vector<int>& rowsToRemove)
     {
         for (int j = rowsToRemove[i]; j < m_numRows - 1; j++)
         {
-            image[j][i] = image[j + 1][i];
+            m_image[j][i] = m_image[j + 1][i];
         }
     }
     m_numRows--;
-}
-
-void SeamCarver::createEnergyMatrix()
-{
-    int m_numRows = image.size();
-
-    for (int row = 0; row < image.size(); row++)
-    {
-        vector<int> energyMatrixCol;
-        int m_numCols = image[row].size();
-
-        for (int col = 0; col < m_numCols; col++)
-        {
-            int rowAbove = row - 1;
-            int rowBelow = row + 1;
-            int colBefore = col - 1;
-            int colAfter = col + 1;
-
-            int aboveDiff;
-            int belowDiff;
-            int leftDiff;
-            int rightDiff;
-
-            int current = image[row][col];
-
-            // if first row
-            if (row == 0)
-            {
-                aboveDiff = 0;
-            }
-            else
-            {
-                aboveDiff = abs(current - image[rowAbove][col]);
-            }
-
-            // if last row
-            if (row == m_numRows - 1)
-            {
-                belowDiff = 0;
-            }
-            else
-            {
-                belowDiff = abs(current - image[rowBelow][col]);
-            }
-
-            // if first col
-            if (col == 0)
-            {
-                leftDiff = 0;
-            }
-            else
-            {
-                leftDiff = abs(current - image[row][colBefore]);
-            }
-
-            // if last col
-            if (col == m_numCols - 1)
-            {
-                rightDiff = 0;
-            }
-            else
-            {
-                rightDiff = abs(current - image[row][colAfter]);
-            }
-
-            energyMatrixCol.push_back( 
-                aboveDiff + // the one above
-                belowDiff + // the one below
-                leftDiff + // the one to the left
-                rightDiff); // the one to the right
-        }
-        energyMatrix.push_back(energyMatrixCol);
-    }
 }
 
 void SeamCarver::printImage()
@@ -316,7 +365,7 @@ void SeamCarver::printImage()
     {
         for (int j = 0; j < m_numCols; j++)
         {
-            cout << image[i][j] << " ";
+            cout << m_image[i][j] << " ";
         }
         cout << endl;
     }
@@ -328,7 +377,19 @@ void SeamCarver::printEnergyMatrix()
     {
         for (int j = 0; j < m_numCols; j++)
         {
-            cout << energyMatrix[i][j] << " ";
+            cout << m_energyMatrix[i][j] << " ";
+        }
+        cout << endl;
+    }
+}
+
+void SeamCarver::printCumulativeEnergyMatrixHorizontal()
+{
+    for (int i = 0; i < m_cumulativeEnergyMatrixHorizontal.size(); i++)
+    {
+        for (int j = 0; j < m_cumulativeEnergyMatrixHorizontal[i].size(); j++)
+        {
+            cout << m_cumulativeEnergyMatrixHorizontal[i][j] << " ";
         }
         cout << endl;
     }
