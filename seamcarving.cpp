@@ -96,8 +96,6 @@ SeamCarver::SeamCarver(string fname, int numRowsToRemove, int numColsToRemove)
 
     // continue on to create the energy matrix
     createEnergyMatrix();
-
-    printEnergyMatrix();
 }
 
 void SeamCarver::getColsToRemoveGreedily()
@@ -212,6 +210,7 @@ void SeamCarver::getRowsToRemoveGreedily()
         }
     }
 }
+
 
 // removes cols, at index 0 remove image[colsToRemove[0], 0]
 // col is the index, row is the value of colsToRemove
