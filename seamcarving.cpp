@@ -72,6 +72,7 @@ SeamCarver::SeamCarver(string fname, int verticalSeamsToRemove, int horizontalSe
         createCumulativeEnergyMatrixVertical();
         getVerticalSeamToRemove();
         removeVerticalSeam();
+        printImage();
         clearMatricesVertical();
     }
 
@@ -79,9 +80,7 @@ SeamCarver::SeamCarver(string fname, int verticalSeamsToRemove, int horizontalSe
     {
         createEnergyMatrix();
         createCumulativeEnergyMatrixHorizontal();
-        printCumulativeEnergyMatrixHorizontal();
         getHorizontalSeamToRemove();
-        printHorizontalSeamToRemove();
         removeHorizontalSeam();
         clearMatricesHorizontal();
         printImage();
