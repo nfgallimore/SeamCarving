@@ -534,7 +534,7 @@ void SeamCarver::printHorizontalSeamToRemove()
 
 void SeamCarver::writeImageToFile()
 {
-  // get index of last period to remove .pgm
+    // get index of last period to remove .pgm
     size_t lastIndex = m_fileName.find_last_of(".");
 
     string newFileName = m_fileName.substr(0, lastIndex);
