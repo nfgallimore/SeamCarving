@@ -117,12 +117,25 @@ void SeamCarver::parseFile(string fileName)
      // skip `P2` literal
     getline(ifs, tmp);
 
-    //** ASSUME IMAGE FILES HAS COMMENTS **//
-    getline(ifs, tmp); 
+    // Check if this line is a comment
+    getline(ifs, tmp);
 
-    // get image's m_numCols and m_numRows
-    ifs >> m_numCols;
-    ifs >> m_numRows;
+    if (tmp[0] == '#')
+    {
+        // get image's m_numCols and m_numRows from next line
+        ifs >> m_numCols;
+        ifs >> m_numRows;
+
+        // skip the new line char for dimensions line
+        getline(ifs, tmp);
+    }
+    else
+    {
+        stringstream ss;
+        ss << tmp;
+        ss >> m_numCols;
+        ss >> m_numRows;
+    }
 
     if (m_numRows - m_horizontalSeamsToRemove < 1)
     {
@@ -138,9 +151,6 @@ void SeamCarver::parseFile(string fileName)
         << " from image with " << m_numCols << " columns";
         throw std::logic_error(msg.str());
     }
-
-    // skip the new line char for dimensions line
-    getline(ifs, tmp);
 
     // skip max grayscale line
     getline(ifs, tmp); 
@@ -524,9 +534,14 @@ void SeamCarver::printHorizontalSeamToRemove()
 
 void SeamCarver::writeImageToFile()
 {
-    ofstream ofs(m_fileName + "_processed.pgm");
+  // get index of last period to remove .pgm
+    size_t lastIndex = m_fileName.find_last_of(".");
+
+    string newFileName = m_fileName.substr(0, lastIndex);
+
+    ofstream ofs(newFileName + "_processed.pgm");
     ofs << "P2" << endl;
-    ofs << "#" << m_fileName << "_processed" << endl;
+    ofs << "# " << newFileName << "_processed" << endl;
     ofs << m_numCols << " " << m_numRows << endl;
     ofs << 255 << endl;
     for (int i = 0; i < m_numRows; i++)
