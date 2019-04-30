@@ -116,11 +116,9 @@ void SeamCarver::parseFile(string fileName)
 
      // skip `P2` literal
     getline(ifs, tmp);
-    cout << tmp;
 
     //** ASSUME IMAGE FILES HAS COMMENTS **//
     getline(ifs, tmp); 
-    cout << tmp;
 
     // get image's m_numCols and m_numRows
     ifs >> m_numCols;
@@ -526,10 +524,11 @@ void SeamCarver::printHorizontalSeamToRemove()
 
 void SeamCarver::writeImageToFile()
 {
-    ofstream ofs(m_fileName + "_processed");
+    ofstream ofs(m_fileName + "_processed.pgm");
     ofs << "P2" << endl;
-    ofs << "# " << m_fileName << "_processed" << endl;;
-    ofs << m_numCols << " " << m_numRows;
+    ofs << "#" << m_fileName << "_processed" << endl;
+    ofs << m_numCols << " " << m_numRows << endl;
+    ofs << 255 << endl;
     for (int i = 0; i < m_numRows; i++)
     {
         for (int j = 0; j < m_numCols; j++)
@@ -542,5 +541,4 @@ void SeamCarver::writeImageToFile()
         }
         ofs << endl;
     }
-    ofs << endl;
 }
