@@ -13,11 +13,11 @@ using namespace std;
 class SeamCarver
 {
 public:
-    SeamCarver(string fname, int m_horizontalSeamsToRemove, int m_verticalSeamsToRemove);
+    SeamCarver(string fileName, int horizontalSeamsToRemove, int verticalSeamsToRemove);
     void printImage();
 
 private:
-    void parseFile(string fname);
+    void parseFile(string fileName);
     void createEnergyMatrix();
     void createCumulativeEnergyMatrixHorizontal();
     void createCumulativeEnergyMatrixVertical();
@@ -34,6 +34,7 @@ private:
     void printCumulativeEnergyMatrixVertical();
     void printHorizontalSeamToRemove();
     void printVerticalSeamToRemove();
+    void writeImageToFile();
 
     // member variables
     vector<vector<int> > m_image;
@@ -46,6 +47,7 @@ private:
     int m_numCols;
     int m_horizontalSeamsToRemove;
     int m_verticalSeamsToRemove;
+    string m_fileName;
 };
 
 int main(int argc, char** argv)
@@ -60,11 +62,12 @@ int main(int argc, char** argv)
     SeamCarver sc(argv[1], atoi(argv[2]), atoi(argv[3]));
 }
 
-SeamCarver::SeamCarver(string fname, int verticalSeamsToRemove, int horizontalSeamsToRemove)
+SeamCarver::SeamCarver(string fileName, int verticalSeamsToRemove, int horizontalSeamsToRemove)
 {
     m_verticalSeamsToRemove = verticalSeamsToRemove;
     m_horizontalSeamsToRemove = horizontalSeamsToRemove;
-    parseFile(fname);
+    m_fileName = fileName;
+    parseFile(fileName);
 
     while (verticalSeamsToRemove--)
     {
@@ -72,7 +75,6 @@ SeamCarver::SeamCarver(string fname, int verticalSeamsToRemove, int horizontalSe
         createCumulativeEnergyMatrixVertical();
         getVerticalSeamToRemove();
         removeVerticalSeam();
-        printImage();
         clearMatricesVertical();
     }
 
@@ -83,8 +85,8 @@ SeamCarver::SeamCarver(string fname, int verticalSeamsToRemove, int horizontalSe
         getHorizontalSeamToRemove();
         removeHorizontalSeam();
         clearMatricesHorizontal();
-        printImage();
     }
+    writeImageToFile();
 }
 
 void SeamCarver::clearMatricesHorizontal()
@@ -101,12 +103,12 @@ void SeamCarver::clearMatricesVertical()
     m_verticalSeamToRemove.clear();
 }
 
-void SeamCarver::parseFile(string fname)
+void SeamCarver::parseFile(string fileName)
 {
-    ifstream ifs(fname);
+    ifstream ifs(fileName);
     if (!ifs.is_open())
     {
-        std::runtime_error(fname + " was not found or is not accessible");
+        std::runtime_error(fileName + " was not found or is not accessible");
     }
 
     // analyze image file header
@@ -520,4 +522,25 @@ void SeamCarver::printHorizontalSeamToRemove()
         cout << m_horizontalSeamToRemove[i] << " ";
     }
     cout << endl << endl;
+}
+
+void SeamCarver::writeImageToFile()
+{
+    ofstream ofs(m_fileName + "_processed");
+    ofs << "P2" << endl;
+    ofs << "# " << m_fileName << "_processed" << endl;;
+    ofs << m_numCols << " " << m_numRows;
+    for (int i = 0; i < m_numRows; i++)
+    {
+        for (int j = 0; j < m_numCols; j++)
+        {
+            ofs << m_image[i][j];
+            if (j != m_numCols - 1)
+            {
+                ofs << " ";
+            }
+        }
+        ofs << endl;
+    }
+    ofs << endl;
 }
