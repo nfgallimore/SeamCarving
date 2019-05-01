@@ -364,6 +364,13 @@ void SeamCarver::getVerticalSeamToRemove()
         int min = numeric_limits<int>::max();
         int minIndex;
 
+        // if not left most col && if left above col is smaller
+        if (j > 0 && m_cumulativeEnergyMatrixVertical[i][j - 1] < min) 
+        {
+            min = m_cumulativeEnergyMatrixVertical[i][j - 1];
+            minIndex = j - 1;
+        }
+
         // check if directly above col is smaller
         if (m_cumulativeEnergyMatrixVertical[i][j] < min)
         {
@@ -371,14 +378,7 @@ void SeamCarver::getVerticalSeamToRemove()
             minIndex = j;
         }
 
-        // if not left most col && if left col above is smaller
-        if (j > 0 && m_cumulativeEnergyMatrixVertical[i][j - 1] < min) 
-        {
-            min = m_cumulativeEnergyMatrixVertical[i][j - 1];
-            minIndex = j - 1;
-        }
-
-        // if not right most col && if right col above is smaller
+        // if not right most col && if right above col is smaller
         if (j != m_numCols - 1 && m_cumulativeEnergyMatrixVertical[i][j + 1] < min) 
         {
             min = m_cumulativeEnergyMatrixVertical[i][j + 1];
@@ -409,18 +409,18 @@ void SeamCarver::getHorizontalSeamToRemove()
         int i = m_horizontalSeamToRemove.back();
         min = numeric_limits<int>::max();
 
-        // if left is smaller
-        if (m_cumulativeEnergyMatrixHorizontal[i][j] < min)
-        {
-            min = m_cumulativeEnergyMatrixHorizontal[i][j];
-            minIndex = i;
-        }
-
         // if not top row && top left is smaller
         if (i != 0 && m_cumulativeEnergyMatrixHorizontal[i - 1][j] < min)
         {
             min = m_cumulativeEnergyMatrixHorizontal[i - 1][j];
             minIndex = i - 1;
+        }
+
+        // if left is smaller
+        if (m_cumulativeEnergyMatrixHorizontal[i][j] < min)
+        {
+            min = m_cumulativeEnergyMatrixHorizontal[i][j];
+            minIndex = i;
         }
 
         // if not bot row && bottom left is smaller
